@@ -2,29 +2,47 @@ import sys
 import re
 import dateutil.parser
 
-class ExpectStart(object):
+class DoNothingState(object):
     def handle(self, ctx, line):
         return self
+
+class ExpectStart(object):
+    start_re = re.compile('start @ ([0-9:]+)', re.IGNORECASE)
+
+    def handle(self, ctx, line):
+        start_str = ExpectStart.start_re.search(line).group(1)
+        ctx['start'] = dateutil.parser.parse(start_str)
+        return DoNothingState()
 
 class ExpectDate(object):
     def handle(self, ctx, line):
         date_str = line[len('## '):]
         date = dateutil.parser.parse(date_str)
-        ctx.date = date
+        ctx['date'] = date
         return ExpectStart()
 
 class ExpectWeek(object):
     week_re = re.compile('week ?(\d+)', re.IGNORECASE)
 
     def handle(self, ctx, line):
-        ctx.week = ExpectWeek.week_re.search(line).group(1)
+        ctx['week'] = ExpectWeek.week_re.search(line).group(1)
         return ExpectDate()
 
 class Context(object):
+    valid_keys = {'week', 'date', 'start', 'end', 'lunch_start', 'lunch_end'}
+
     def __init__(self):
         self.state = ExpectWeek()
-        self.week = None
-        self.date = None
+        self.__dict = {}
+
+    def __getitem__(self, key):
+        return self.__dict[key]
+
+    def __setitem__(self, key, value):
+        if key not in Context.valid_keys:
+            raise KeyError('Invalid key ' + key)
+        print(key, '=', value)
+        self.__dict[key] = value
 
     def handle(self, line):
         if not line.strip(): return
@@ -43,11 +61,6 @@ if __name__ == '__main__':
         for line in f:
             num_lines += 1
             ctx.handle(line)
-
-            print('Line {line_num}: "{line}"'.format(line_num=num_lines,
-                line=line.strip()))
-            print('\tWeek', ctx.week)
-            print('\tDate', ctx.date)
 
     if verbose:
         print('Processed', num_lines, 'lines')
