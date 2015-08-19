@@ -6,13 +6,30 @@ class DoNothingState(object):
     def handle(self, ctx, line):
         return self
 
+class ExpectEnd(object):
+    end_re = re.compile('stop @ ([0-9:]+)', re.IGNORECASE)
+
+    def handle(self, ctx, line):
+        end_str = ExpectEnd.end_re.search(line).group(1)
+        ctx['end'] = dateutil.parser.parse(end_str)
+        return DoNothingState()
+
+class ExpectLunch(object):
+    lunch_re = re.compile('lunch:? ([0-9:]+)-([0-9:]+)', re.IGNORECASE)
+
+    def handle(self, ctx, line):
+        match = ExpectLunch.lunch_re.search(line)
+        ctx['lunch_start'] = match.group(1)
+        ctx['lunch_end'] = match.group(2)
+        return ExpectEnd()
+
 class ExpectStart(object):
     start_re = re.compile('start @ ([0-9:]+)', re.IGNORECASE)
 
     def handle(self, ctx, line):
         start_str = ExpectStart.start_re.search(line).group(1)
         ctx['start'] = dateutil.parser.parse(start_str)
-        return DoNothingState()
+        return ExpectLunch()
 
 class ExpectDate(object):
     def handle(self, ctx, line):
