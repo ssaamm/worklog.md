@@ -1,6 +1,7 @@
 import sys
 import re
 import collections
+import functools
 import dateutil.parser
 
 class ExpectDescription(object):
@@ -54,7 +55,7 @@ class ExpectWeek(object):
 
     def handle(self, ctx, line):
         ctx['week'] = ExpectWeek.week_re.search(line).group(1)
-        return ExpectDate()
+        return ExpectDescription()
 
 class Context(object):
     valid_keys = {'week', 'date', 'start', 'end', 'lunch_start', 'lunch_end'}
@@ -84,20 +85,20 @@ class Context(object):
 
         self.__dict[key] = value
 
-    def register(self, changed, callback):
+    def register(self, changed, handler):
         if changed not in Context.valid_keys:
             raise ValueError('Cannot register for change in ' + changed)
 
-        self.handlers[changed].append(callback)
+        self.handlers[changed].append(handler)
 
     def handle(self, line):
         if line.strip():
             self.state = self.state.handle(self, line)
         return self.state
 
-def date_changed(changed, old, new, ctx_data):
-    print(changed, 'changed')
-    print('\tfrom', old, 'to', new)
+def save_stats(changed, old, new, ctx_data, stats):
+    if not old: return
+    stats[old] = ctx_data
 
 if __name__ == '__main__':
     fname = sys.argv[1]
@@ -108,11 +109,24 @@ if __name__ == '__main__':
     num_lines = 0
 
     ctx = Context()
-    ctx.register(changed='date', callback=date_changed)
+
+    day_to_stats = {}
+    save_day_stats = functools.partial(save_stats, stats=day_to_stats)
+
+    ctx.register(changed='date', handler=save_day_stats)
+
     with open(fname, 'r') as f:
         for line in f:
             num_lines += 1
-            ctx.handle(line)
+            try:
+                ctx.handle(line)
+            except:
+                print('Error on line', num_lines, '-', line.strip())
+                exit()
 
     if verbose:
         print('Processed', num_lines, 'lines')
+
+    for day, stats in day_to_stats.items():
+        print(day)
+        print('\tIn office: ', stats['end'] - stats['start'])
