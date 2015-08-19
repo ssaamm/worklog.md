@@ -1,9 +1,16 @@
 import sys
 import re
+import collections
 import dateutil.parser
 
-class DoNothingState(object):
+class ExpectDescription(object):
     def handle(self, ctx, line):
+        if line.find('# ') == 0:
+            ctx.state = ExpectWeek()
+            return ctx.handle(line)
+        if line.find('## ') == 0:
+            ctx.state = ExpectDate()
+            return ctx.handle(line)
         return self
 
 class ExpectEnd(object):
@@ -12,15 +19,19 @@ class ExpectEnd(object):
     def handle(self, ctx, line):
         end_str = ExpectEnd.end_re.search(line).group(1)
         ctx['end'] = dateutil.parser.parse(end_str)
-        return DoNothingState()
+        return ExpectDescription()
 
 class ExpectLunch(object):
     lunch_re = re.compile('lunch:? ([0-9:]+)-([0-9:]+)', re.IGNORECASE)
 
     def handle(self, ctx, line):
         match = ExpectLunch.lunch_re.search(line)
-        ctx['lunch_start'] = match.group(1)
-        ctx['lunch_end'] = match.group(2)
+        if match:
+            ctx['lunch_start'] = match.group(1)
+            ctx['lunch_end'] = match.group(2)
+        else:
+            ctx['lunch_start'] = None
+            ctx['lunch_end'] = None
         return ExpectEnd()
 
 class ExpectStart(object):
@@ -51,19 +62,42 @@ class Context(object):
     def __init__(self):
         self.state = ExpectWeek()
         self.__dict = {}
+        self.handlers = collections.defaultdict(list)
 
     def __getitem__(self, key):
-        return self.__dict[key]
+        try:
+            return self.__dict[key]
+        except KeyError:
+            if key in Context.valid_keys:
+                return None
+            raise
+
+    def __contains__(self, item):
+        return item in self.__dict
 
     def __setitem__(self, key, value):
         if key not in Context.valid_keys:
             raise KeyError('Invalid key ' + key)
-        print(key, '=', value)
+
+        for handler in self.handlers[key]:
+            handler(changed=key, old=self[key], new=value, ctx_data=dict(self.__dict))
+
         self.__dict[key] = value
 
+    def register(self, changed, callback):
+        if changed not in Context.valid_keys:
+            raise ValueError('Cannot register for change in ' + changed)
+
+        self.handlers[changed].append(callback)
+
     def handle(self, line):
-        if not line.strip(): return
-        self.state = self.state.handle(self, line)
+        if line.strip():
+            self.state = self.state.handle(self, line)
+        return self.state
+
+def date_changed(changed, old, new, ctx_data):
+    print(changed, 'changed')
+    print('\tfrom', old, 'to', new)
 
 if __name__ == '__main__':
     fname = sys.argv[1]
@@ -74,6 +108,7 @@ if __name__ == '__main__':
     num_lines = 0
 
     ctx = Context()
+    ctx.register(changed='date', callback=date_changed)
     with open(fname, 'r') as f:
         for line in f:
             num_lines += 1
