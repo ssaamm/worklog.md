@@ -127,17 +127,9 @@ if __name__ == '__main__':
                 print('Error on line', num + 1, '-', line.strip())
                 exit()
 
-    time_at_office = []
-    time_at_lunch = []
-    time_working = []
-    for day, stats in day_to_stats.items():
-        lunch_time = hours_diff(stats['lunch_end'], stats['lunch_start'])
-        office_time = hours_diff(stats['end'], stats['start'])
-        working_time = office_time - lunch_time
-
-        time_at_office.append(office_time)
-        time_at_lunch.append(lunch_time)
-        time_working.append(working_time)
+    time_at_lunch = [hours_diff(s['lunch_end'], s['lunch_start']) for d, s in day_to_stats.items()]
+    time_at_office = [hours_diff(s['end'], s['start']) for d, s in day_to_stats.items()]
+    time_working = [t[0] - t[1] for t in zip(time_at_office, time_at_lunch)]
 
     fig, axes = plt.subplots(ncols=2, figsize=(6,6))
     axes[0].boxplot(time_at_lunch)
