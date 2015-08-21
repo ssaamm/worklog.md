@@ -4,6 +4,10 @@ import collections
 import functools
 import dateutil.parser
 
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+import numpy as np
+
 class ExpectDescription(object):
     def handle(self, ctx, line):
         if line.find('# ') == 0:
@@ -28,8 +32,8 @@ class ExpectLunch(object):
     def handle(self, ctx, line):
         match = ExpectLunch.lunch_re.search(line)
         if match:
-            ctx['lunch_start'] = match.group(1)
-            ctx['lunch_end'] = match.group(2)
+            ctx['lunch_start'] = dateutil.parser.parse(match.group(1))
+            ctx['lunch_end'] = dateutil.parser.parse(match.group(2))
         else:
             ctx['lunch_start'] = None
             ctx['lunch_end'] = None
@@ -100,33 +104,42 @@ def save_stats(changed, old, new, ctx_data, stats):
     if not old: return
     stats[old] = ctx_data
 
+def hours_diff(end, start):
+    if not end or not start:
+        return 0
+    diff = end - start
+    return diff.total_seconds() / 3600
+
 if __name__ == '__main__':
     fname = sys.argv[1]
-    verbose = False
-    if '-v' in sys.argv:
-        verbose = True
-
-    num_lines = 0
-
-    ctx = Context()
 
     day_to_stats = {}
     save_day_stats = functools.partial(save_stats, stats=day_to_stats)
 
+    ctx = Context()
     ctx.register(changed='date', handler=save_day_stats)
 
     with open(fname, 'r') as f:
-        for line in f:
-            num_lines += 1
+        for num, line in enumerate(f):
             try:
                 ctx.handle(line)
             except:
-                print('Error on line', num_lines, '-', line.strip())
+                print('Error on line', num + 1, '-', line.strip())
                 exit()
 
-    if verbose:
-        print('Processed', num_lines, 'lines')
-
+    time_at_office = []
+    time_at_lunch = []
+    time_working = []
     for day, stats in day_to_stats.items():
-        print(day)
-        print('\tIn office: ', stats['end'] - stats['start'])
+        lunch_time = hours_diff(stats['lunch_end'], stats['lunch_start'])
+        office_time = hours_diff(stats['end'], stats['start'])
+        working_time = office_time - lunch_time
+
+        time_at_office.append(office_time)
+        time_at_lunch.append(lunch_time)
+        time_working.append(working_time)
+
+    fig, axes = plt.subplots(ncols=2, figsize=(6,6))
+    axes[0].boxplot(time_at_lunch)
+    axes[1].boxplot([time_working, time_at_office])
+    plt.savefig('foo.png')
