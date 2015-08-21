@@ -1,3 +1,17 @@
+'''
+Usage examples:
+
+Process the file worklog.md:
+
+    python process.py worklog.md
+
+(By default, output figure is saved in whatever your filename is appended with
+'.png', so 'worklog.md.png' in this case)
+
+Process the file worklog.md, storing output in foo.png:
+
+    python process.py worklog.md foo.png
+'''
 import sys
 import re
 import collections
@@ -112,6 +126,7 @@ def hours_diff(end, start):
 
 if __name__ == '__main__':
     fname = sys.argv[1]
+    output = sys.argv[2] if len(sys.argv) > 2 else sys.argv[1] + '.png'
 
     day_to_stats = {}
     save_day_stats = functools.partial(save_stats, stats=day_to_stats)
@@ -134,4 +149,4 @@ if __name__ == '__main__':
     fig, axes = plt.subplots(ncols=2, figsize=(6,6))
     axes[0].boxplot(time_at_lunch)
     axes[1].boxplot([time_working, time_at_office])
-    plt.savefig('foo.png')
+    plt.savefig(output)
