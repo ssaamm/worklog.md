@@ -18,6 +18,8 @@ import collections
 import functools
 import dateutil.parser
 
+from itertools import groupby
+
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 import numpy as np
@@ -114,6 +116,9 @@ class Context(object):
             self.state = self.state.handle(self, line)
         return self.state
 
+def sorted_groupby(iterable, key=None):
+    return groupby(sorted(iterable, key=key), key=key)
+
 def save_stats(changed, old, new, ctx_data, stats):
     if not old: return
     stats[old] = ctx_data
@@ -123,6 +128,30 @@ def hours_diff(end, start):
         return 0
     diff = end - start
     return diff.total_seconds() / 3600
+
+def print_hours_per_week(day_to_stats):
+    def year_week(day_to_stat):
+        ic = day_to_stat[0].isocalendar()
+        return ic[0], ic[1]
+
+    for week, day_stats in sorted_groupby(day_to_stats.items(), key=year_week):
+        day_stats = list(day_stats)
+
+        time_at_lunch = [hours_diff(s['lunch_end'], s['lunch_start']) for d, s in day_stats]
+        time_at_office = [hours_diff(s['end'], s['start']) for d, s in day_stats]
+        time_working = [t[0] - t[1] for t in zip(time_at_office, time_at_lunch)]
+
+        print '{}w{} - {:.02f}h'.format(week[0], week[1], sum(time_working))
+
+def plot_time_working_and_at_office(day_to_stats):
+    time_at_lunch = [hours_diff(s['lunch_end'], s['lunch_start']) for d, s in day_to_stats.items()]
+    time_at_office = [hours_diff(s['end'], s['start']) for d, s in day_to_stats.items()]
+    time_working = [t[0] - t[1] for t in zip(time_at_office, time_at_lunch)]
+
+    fig, axes = plt.subplots(ncols=2, figsize=(6,6))
+    axes[0].boxplot(time_at_lunch)
+    axes[1].boxplot([time_working, time_at_office])
+    plt.savefig(output)
 
 if __name__ == '__main__':
     fname = sys.argv[1]
@@ -142,11 +171,4 @@ if __name__ == '__main__':
                 print('Error on line', num + 1, '-', line.strip())
                 exit()
 
-    time_at_lunch = [hours_diff(s['lunch_end'], s['lunch_start']) for d, s in day_to_stats.items()]
-    time_at_office = [hours_diff(s['end'], s['start']) for d, s in day_to_stats.items()]
-    time_working = [t[0] - t[1] for t in zip(time_at_office, time_at_lunch)]
-
-    fig, axes = plt.subplots(ncols=2, figsize=(6,6))
-    axes[0].boxplot(time_at_lunch)
-    axes[1].boxplot([time_working, time_at_office])
-    plt.savefig(output)
+    print_hours_per_week(day_to_stats)
