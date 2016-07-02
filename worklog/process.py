@@ -12,10 +12,10 @@ Process the file worklog.md, storing output in foo.png:
 
     python process.py worklog.md foo.png
 '''
+from .day_stats_walker import DayStatsWalker
+from .parsing import WorklogLexer, WorklogParser
 from antlr4 import FileStream, CommonTokenStream, ParseTreeWalker
-from day_stats_walker import DayStatsWalker
 from itertools import groupby
-from parsing import WorklogLexer, WorklogParser
 import sys
 
 
@@ -61,7 +61,7 @@ def print_hours_per_week(day_to_stats):
     for week, hours in get_hours_per_week(day_to_stats):
         print('{}wk{}: {:.02f}'.format(week[0], week[1], hours))
 
-if __name__ == '__main__':
+def run():
     daily = True
     try:
         option = sys.argv[2]
@@ -87,3 +87,6 @@ if __name__ == '__main__':
         print_hours_per_day(day_to_stats)
     else:
         print_hours_per_week(day_to_stats)
+
+if __name__ == '__main__':
+    run()

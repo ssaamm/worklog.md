@@ -1,4 +1,4 @@
-from parsing import WorklogListener
+from .parsing import WorklogListener
 from datetime import datetime
 
 
