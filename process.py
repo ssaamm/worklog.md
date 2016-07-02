@@ -27,28 +27,30 @@ def hours_diff(end, start):
     diff = end - start
     return diff.total_seconds() / 3600
 
-def print_hours_per_week(day_to_stats):
-    def year_week(day_to_stat):
-        ic = day_to_stat[0].isocalendar()
-        return ic[0], ic[1]
-
-    for week, day_stats in sorted_groupby(day_to_stats.items(), key=year_week):
-        day_stats = list(day_stats)
-
-        time_at_lunch = [0 if s['is_lunch_business'] else hours_diff(s['lunch_end'], s['lunch_start']) for d, s in day_stats]
-        time_at_office = [hours_diff(s['end'], s['start']) + hours_diff(s['extra_end'], s['extra_start'])for d, s in day_stats]
-        time_working = [t[0] - t[1] for t in zip(time_at_office, time_at_lunch)]
-
-        print('{}w{} - {:.02f}h'.format(week[0], week[1], sum(time_working)))
-
-def print_hours_per_day(day_to_stats):
+def get_hours_per_day(day_to_stats):
     for day, stats in sorted(day_to_stats.items()):
         time_at_lunch = hours_diff(stats['lunch_end'], stats['lunch_start'])
         if stats['is_lunch_business']:
             time_at_lunch = 0
         time_at_office = hours_diff(stats['end'], stats['start']) + hours_diff(stats['extra_end'], stats['extra_start'])
 
-        print(day.strftime('%Y-%m-%d:'), time_at_office - time_at_lunch)
+        yield day, time_at_office - time_at_lunch
+
+def week_of_year(day_hours):
+    ic = day_hours[0].isocalendar()
+    return ic[0], ic[1]
+
+def get_hours_per_week(day_to_stats):
+    for week, day_hours in groupby(get_hours_per_day(day_to_stats), key=week_of_year):
+        yield week, sum([h for _, h in day_hours])
+
+def print_hours_per_day(day_to_stats):
+    for day, hours in get_hours_per_day(day_to_stats):
+        print(day.strftime('%Y-%m-%d:'), hours)
+
+def print_hours_per_week(day_to_stats):
+    for week, hours in get_hours_per_week(day_to_stats):
+        print('{}wk{}: {:.02f}'.format(week[0], week[1], hours))
 
 if __name__ == '__main__':
     daily = True
