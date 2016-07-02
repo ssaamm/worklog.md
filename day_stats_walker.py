@@ -1,15 +1,19 @@
 from parsing import WorklogListener
 from datetime import datetime
 
+
 def parse_time(s):
     return datetime.strptime(s, '%H:%M')
+
 
 def parse_date(s):
     return datetime.strptime(s, '%d %b %Y')
 
+
 def parse_time_range(s):
     start_str, end_str = s.split('-')
     return parse_time(start_str), parse_time(end_str)
+
 
 class DayStatsWalker(WorklogListener):
     def __init__(self):
