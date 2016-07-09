@@ -12,12 +12,9 @@ Process the file worklog.md, storing output in foo.png:
 
     python process.py worklog.md foo.png
 '''
-from .day_stats_walker import DayStatsWalker
-from .parsing import WorklogLexer, WorklogParser
-from antlr4 import FileStream, CommonTokenStream, ParseTreeWalker
 from itertools import groupby
+from . import get_day_stats
 import sys
-
 
 def sorted_groupby(iterable, key=None):
     return groupby(sorted(iterable, key=key), key=key)
@@ -70,18 +67,7 @@ def run():
     except IndexError:
         pass
 
-    input_file = FileStream(sys.argv[1])
-    lexer = WorklogLexer(input_file)
-    stream = CommonTokenStream(lexer)
-    parser = WorklogParser(stream)
-    tree = parser.wl()
-
-    stats_walker = DayStatsWalker()
-    walker = ParseTreeWalker()
-    walker.walk(stats_walker, tree)
-    stats_walker._save_current_stats()
-
-    day_to_stats = stats_walker.stats
+    day_to_stats = get_day_stats(sys.argv[1])
 
     if daily:
         print_hours_per_day(day_to_stats)

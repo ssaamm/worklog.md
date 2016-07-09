@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
         name='worklogmd',
-        version=0.22,
+        version=0.23,
         author='Samuel Taylor',
         url='https://github.com/ssaamm/worklog.md',
         description='Text-based work habit tracker',
