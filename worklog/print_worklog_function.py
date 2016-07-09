@@ -1,7 +1,7 @@
-# source this in your bashrc to get the `worklog` helper function
+SCRIPT_SRC = '''
+WORKLOG=$HOME/worklog.md
 
 worklog() {
-    WORKLOG=$HOME/worklog.md
     theDate=`date +'%d %b %Y'`
     if ! grep --quiet "$theDate" $WORKLOG
     then
@@ -16,3 +16,10 @@ worklog() {
 }
 
 alias wl=worklog
+'''
+
+def run():
+    print(SCRIPT_SRC)
+
+if __name__ == '__main__':
+    run()

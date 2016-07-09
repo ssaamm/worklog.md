@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
         name='worklogmd',
-        version=0.21,
+        version=0.22,
         author='Samuel Taylor',
         url='https://github.com/ssaamm/worklog.md',
         description='Text-based work habit tracker',
@@ -10,6 +10,7 @@ setup(
         packages=['worklog', 'worklog.parsing'],
         install_requires=['antlr4-python3-runtime'],
         entry_points={
-            'console_scripts': ['processWorklog = worklog.process:run'],
+            'console_scripts': ['processWorklog = worklog.process:run',
+                                'printWorklogFunction = worklog.print_worklog_function:run'],
         },
 )
