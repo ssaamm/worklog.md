@@ -12,6 +12,7 @@ Process the file worklog.md, storing output in foo.png:
 
     python process.py worklog.md foo.png
 '''
+from __future__ import print_function
 from itertools import groupby
 from . import get_day_stats
 import sys
